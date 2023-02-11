@@ -644,8 +644,6 @@ static bool s_crit_event_upgraded = false;
  */
 static long page_k = PAGE_SIZE / 1024;
 
-static void update_perf_props();
-
 static bool update_props();
 static bool init_monitors();
 static void destroy_monitors();
@@ -4830,32 +4828,7 @@ int issue_reinit() {
     return res == UPDATE_PROPS_SUCCESS ? 0 : -1;
 }
 
-static void update_perf_props() {
-    	enable_watermark_check =
-    	property_get_bool("ro.lmk.enable_watermark_check", false);
-   	level_oomadj[VMPRESS_LEVEL_SUPER_CRITICAL] = (int64_t)GET_LMK_PROPERTY(int32, "super_critical", 606);
-        direct_reclaim_pressure = (int64_t)GET_LMK_PROPERTY(int32, "direct_reclaim_pressure", 45);
-        psi_window_size_ms = (int64_t)GET_LMK_PROPERTY(int32, "psi_window_size_ms", PSI_WINDOW_SIZE_MS);
-        psi_thresholds[VMPRESS_LEVEL_SUPER_CRITICAL].threshold_ms = (int64_t)GET_LMK_PROPERTY(int32, "psi_scrit_complete_stall_ms", PSI_SCRIT_COMPLETE_STALL_MS);
-        psi_poll_period_scrit_ms = (int64_t)GET_LMK_PROPERTY(int32, "psi_poll_period_scrit_ms", PSI_POLL_PERIOD_SHORT_MS);
-        reclaim_scan_threshold = (int64_t)GET_LMK_PROPERTY(int32, "reclaim_scan_threshold", reclaim_scan_threshold);
-        psi_cont_event_thresh = (int64_t)GET_LMK_PROPERTY(int32, "psi_cont_event_thresh", PSI_CONT_EVENT_THRESH);
-    	enhance_batch_kill = GET_LMK_PROPERTY(bool, "enhance_batch_kill", true);
-    	enable_adaptive_lmk = GET_LMK_PROPERTY(bool, "enable_adaptive_lmk", false);
-    	enable_userspace_lmk = GET_LMK_PROPERTY(bool, "enable_userspace_lmk", false);
-    	enable_watermark_check = GET_LMK_PROPERTY(bool, "enable_watermark_check", false);
-        wmark_boost_factor = (int64_t)GET_LMK_PROPERTY(int32, "nstrat_wmark_boost_factor", wmark_boost_factor);
-        wbf_effective = wmark_boost_factor;
-
-        cache_percent_base = (int64_t)GET_LMK_PROPERTY(int32, "ro.lmk.cache_percent", cache_percent);
-        cache_percent = (float)(cache_percent_base * 0.01);
-
-        //Update kernel interface during re-init.
-        use_inkernel_interface = has_inkernel_module && !enable_userspace_lmk;
-        update_psi_window_size();
-}
-
-static void update_props() {
+static bool update_props() {
     /* By default disable low level vmpressure events */
     level_oomadj[VMPRESS_LEVEL_LOW] =
         GET_LMK_PROPERTY(int32, "low", OOM_SCORE_ADJ_MAX + 1);
@@ -4903,6 +4876,29 @@ static void update_props() {
 
     reaper.enable_debug(debug_process_killing);
 
+    enable_watermark_check =
+    property_get_bool("ro.lmk.enable_watermark_check", false);
+    level_oomadj[VMPRESS_LEVEL_SUPER_CRITICAL] = (int64_t)GET_LMK_PROPERTY(int32, "super_critical", 606);
+    direct_reclaim_pressure = (int64_t)GET_LMK_PROPERTY(int32, "direct_reclaim_pressure", 45);
+    psi_window_size_ms = (int64_t)GET_LMK_PROPERTY(int32, "psi_window_size_ms", PSI_WINDOW_SIZE_MS);
+    psi_thresholds[VMPRESS_LEVEL_SUPER_CRITICAL].threshold_ms = (int64_t)GET_LMK_PROPERTY(int32, "psi_scrit_complete_stall_ms", PSI_SCRIT_COMPLETE_STALL_MS);
+    psi_poll_period_scrit_ms = (int64_t)GET_LMK_PROPERTY(int32, "psi_poll_period_scrit_ms", PSI_POLL_PERIOD_SHORT_MS);
+    reclaim_scan_threshold = (int64_t)GET_LMK_PROPERTY(int32, "reclaim_scan_threshold", reclaim_scan_threshold);
+    psi_cont_event_thresh = (int64_t)GET_LMK_PROPERTY(int32, "psi_cont_event_thresh", PSI_CONT_EVENT_THRESH);
+    enhance_batch_kill = GET_LMK_PROPERTY(bool, "enhance_batch_kill", true);
+    enable_adaptive_lmk = GET_LMK_PROPERTY(bool, "enable_adaptive_lmk", false);
+    enable_userspace_lmk = GET_LMK_PROPERTY(bool, "enable_userspace_lmk", false);
+    enable_watermark_check = GET_LMK_PROPERTY(bool, "enable_watermark_check", false);
+    wmark_boost_factor = (int64_t)GET_LMK_PROPERTY(int32, "nstrat_wmark_boost_factor", wmark_boost_factor);
+    wbf_effective = wmark_boost_factor;
+
+    cache_percent_base = (int64_t)GET_LMK_PROPERTY(int32, "ro.lmk.cache_percent", cache_percent);
+    cache_percent = (float)(cache_percent_base * 0.01);
+
+    //Update kernel interface during re-init.
+    use_inkernel_interface = has_inkernel_module && !enable_userspace_lmk;
+    update_psi_window_size();
+        
     /* Call the update props hook */
     if (!lmkd_update_props_hook()) {
         ALOGE("Failed to update LMKD hook props.");
@@ -4910,9 +4906,6 @@ static void update_props() {
     }
 
     return true;
-
-    // Update Perf Properties
-    update_perf_props();
 }
 
 int main(int argc, char **argv) {
